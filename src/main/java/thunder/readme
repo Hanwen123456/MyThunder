@@ -1,0 +1,63 @@
+一个模仿迅雷下载实现多线程下载
+     一、实现步骤
+     步骤:
+                 1.先发一个请求  method为HEAD，以获取下载的文件的大小
+                 2.利用 RandomAccessFile类来指定文件大小，以创建新的空文件， 作用:在磁盘上占一个位置，
+                  随机访问文件类：读写，按指定的位置访问，seek(long position)
+                 3.开始下载，创建线程，计算此线程的start,end， 拼接协议:Range:byte=5001-10000
+                  发出请求，下载制定部分
+                 4.此线程边下载，边保存到指定文件的指定位置，
+                  利用RandomAccessFile的seek(long pos) 指定起始位置，再保存数据
+
+
+                 下载步骤 ：
+                 1. 先只取文件大小，创建本地空文件.
+                 2. 再按线程分段下载.
+
+                 对于步骤一:   Http协议
+                 请求头->method  ->  GET/POST/   HEAD   /DELETE/PUT/TRACE/OPTION
+                   采用 HEAD    -> 它告诉服务器，只取文件 的Content-Length, 不下载内容
+
+                 创建本地空文件. RandomAccessFile: 随机访问文件. (可访问文件的任意位置 ) | 顺序访问
+                         raf. seek(   字节数  )      setLength( 大小 )
+
+                 计算每段大小.   下载的位置如何通知服务器
+                     Range: bytes=start-end
+
+
+                 如何在主线程中获知每个子线程的下载量，并累加.   -> 回调机制+synchronized/AtomicLong
+
+                 回调机制:
+                 每个线程下载的length回调至主线程的notifyResult方法，对total进行累加操作
+
+     二、知识点总结
+        1.下载的总字节数使用AtomicLong类修饰，保证多线程环境下的数据一致性
+
+          AtomicLong是一个线程安全的长整型变量，它提供了一些原子性的操作，可以保证多个线程同时对它进行读/写操作时的数据一致性。
+          在Java中，long类型的读/写操作并不是原子性的，也就是说，当多个线程同时对一个long类型的变量进行读/写操作时，可能会出现数据不一致的情况。为了解决这个问题，Java提供了AtomicLong类。
+          AtomicLong类提供了一些原子性的操作，包括get、set、getAndIncrement、incrementAndGet、getAndAdd、addAndGet等方法。这些方法都是原子性的，即使多个线程同时调用这些方法，也不会出现数据不一致的情况。
+          AtomicLong类的实现是基于CAS（Compare and Swap）机制的。CAS机制是一种无锁算法，它通过比较当前内存值和预期值是否相等来判断内存值是否被修改过。如果相等，则将新值写入内存；否则，重新读取内存值，并再次尝试修改。
+          使用AtomicLong类可以有效地提高程序的并发性能，特别是在高并发的场景下。但需要注意的是，在一些特殊的场景下，使用AtomicLong可能会带来一些额外的开销，因此需要根据具体的业务场景进行选择。
+
+          除了AtomicLong，还有许多其他线程安全的类，其中一些常用的包括：
+              AtomicInteger：提供对整型数据的原子操作。
+              AtomicBoolean：提供对布尔类型数据的原子操作。
+              AtomicReference：提供对引用类型数据的原子操作。
+              ConcurrentHashMap：是一个线程安全的哈希表实现，可以在并发环境下高效地进行读写操作。
+              CopyOnWriteArrayList：是一个线程安全的动态数组实现，在并发环境下可以高效地进行读操作。
+              CopyOnWriteArraySet：是一个线程安全的集合实现，基于CopyOnWriteArrayList实现。
+
+          使用volatile与使用线程安全类的区别。
+              变量类型：volatile只能修饰变量，而线程安全类可以是各种数据结构，如集合、映射等。
+              原子性：volatile只能保证可见性，不能保证原子性。即，当一个线程修改了volatile变量的值时，其他线程可以立即看到最新的值，但如果多个线程同时修改volatile变量，仍然可能出现竞态条件。而线程安全类通过内部的同步机制，可以保证原子性操作。
+              内存屏障：volatile使用内存屏障机制来保证可见性。读取volatile变量时，会强制从主内存中读取最新的值，并将其缓存在本地内存中。写入volatile变量时，会立即将值刷新到主内存中。这样可以确保不同线程之间对volatile变量的读写操作是可见的。而线程安全类则使用不同的同步机制，如锁或CAS操作，来保证线程的可见性和原子性。
+              应用场景：volatile适用于简单的标志位或状态标记，例如用于控制线程的启停、标记任务完成等。线程安全类适用于更复杂的并发场景，可以提供更多的功能和灵活性。
+          综上所述，volatile适用于简单的状态标记，而线程安全类适用于更复杂的并发操作，可以提供更强大的线程安全保证和功能。在选择使用哪种机制时，需要根据具体的需求和场景进行权衡。
+
+        2.本项目使用HttpURLConnection发送HTTP请求并接收响应
+        3.RandomAccessFile
+          它可以在文件中随意移动读写位置，并且支持随机读写操作。与其他输入输出流不同，RandomAccessFile可以读取和写入任意位置的数据，而不仅仅是顺序读写。
+          raf.seek(100); // 将读写位置定位到文件的第100个字节处
+
+
+

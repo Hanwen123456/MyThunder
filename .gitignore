@@ -1,0 +1,14 @@
+# Created by .ignore support plugin (hsz.mobi)
+
+
+# IntelliJ project files
+/target/
+/log/
+.idea
+.idea/
+.classpath
+.project
+.settings
+*.iml
+out
+gen
